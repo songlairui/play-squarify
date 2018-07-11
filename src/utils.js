@@ -1,3 +1,20 @@
+import squarify from 'squarify'
+
+export function squarifyOne(arr, ...x) {
+  return squarify.call(
+    null,
+    arr.map(
+      obj =>
+        new Proxy(obj, {
+          get(target, prop, receiver) {
+            if (prop === 'children') return undefined
+            return Reflect.get(target, prop, receiver)
+          }
+        })
+    ),
+    ...x
+  )
+}
 export function fileArrayToStructure(arr) {
   const raw = {}
   let file = arr.pop()
@@ -37,6 +54,7 @@ export function fileArrayToStructure(arr) {
       type: 'file',
       full: file
     }
+    // 文件作为叶子
     if (folders.length) {
       raw[folders.join('/')].children.push(item)
     } else {
