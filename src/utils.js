@@ -15,6 +15,46 @@ export function squarifyOne(arr, ...x) {
     ...x
   )
 }
+
+export function squarifySeveral(arr, container, level = 0) {
+  const data = limitArrChild(arr, level)
+  console.warn('src', data)
+  return squarify(data, container)
+}
+
+export function limitArrChild(obj, level = 0) {
+  // 不考虑循环引用
+  const layers = []
+  function deepClone(obj) {
+    if (
+      !obj ||
+      ['string', 'number', 'boolean', 'function', 'symbol'].includes(typeof obj)
+    )
+      return obj
+    let currentIdx =
+      layers.findIndex(arr =>
+        arr.find(
+          cacheObj => cacheObj.children && cacheObj.children.indexOf(obj) > -1
+        )
+      ) + 1
+    layers[currentIdx] = layers[currentIdx] || []
+    layers[currentIdx].push(obj)
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => deepClone(item))
+    }
+    if (typeof obj === 'object') {
+      obj.value // 触发Proxy的getter
+      return Object.keys(obj).reduce((result, key) => {
+        if (key !== 'children' || currentIdx <= level) {
+          result[key] = deepClone(obj[key])
+        }
+        return result
+      }, {})
+    }
+  }
+  return deepClone(obj)
+}
 export function fileArrayToStructure(arr) {
   const raw = {}
   let file = arr.pop()

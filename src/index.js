@@ -1,12 +1,13 @@
 import squarify from 'squarify'
 import { files } from './data'
-import { fileArrayToStructure, squarifyOne } from './utils'
+import { fileArrayToStructure, squarifyOne, squarifySeveral } from './utils'
 
 const data = fileArrayToStructure(files)
 const container = { x0: 0, y0: 0, x1: 100, y1: 100 }
 
 function calc() {
-  const output = squarifyOne(data, container)
+  // console.warn(data.map(a => a.value)) // 触发所有Proxy的getter
+  const output = squarifySeveral(data, container, 4)
   console.log('test', output)
   window.output = output
 }
