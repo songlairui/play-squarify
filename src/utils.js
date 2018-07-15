@@ -1,19 +1,7 @@
 import squarify from 'squarify'
 
 export function squarifyOne(arr, ...x) {
-  return squarify.call(
-    null,
-    arr.map(
-      obj =>
-        new Proxy(obj, {
-          get(target, prop, receiver) {
-            if (prop === 'children') return undefined
-            return Reflect.get(target, prop, receiver)
-          }
-        })
-    ),
-    ...x
-  )
+  return squarify.call(null, noChildArr(arr), ...x)
 }
 
 export function squarifySeveral(arr, container, level = 0) {
@@ -21,7 +9,16 @@ export function squarifySeveral(arr, container, level = 0) {
   console.warn('src', data)
   return squarify(data, container)
 }
-
+export function noChildArr(arr) {
+  return arr.map(obj => {
+    return new Proxy(obj.__target__ || obj, {
+      get(target, prop, receiver) {
+        if (prop === 'children') return undefined
+        return obj[prop]
+      }
+    })
+  })
+}
 export function limitArrChild(obj, level = 0) {
   // 不考虑循环引用
   const layers = []
@@ -74,6 +71,7 @@ export function fileArrayToStructure(arr) {
           },
           {
             get(target, prop, receiver) {
+              if (prop === '__target__') return target
               if (prop !== 'value') return Reflect.get(target, prop, receiver)
               if (target.value !== undefined) return target.value
               const value = target.children.reduce((a, b) => a + b.value, 0) // 求和
@@ -102,7 +100,7 @@ export function fileArrayToStructure(arr) {
     }
     file = arr.pop()
   }
-  console.warn(raw)
+  // console.warn(raw)
   return Object.keys(raw)
     .filter(key => key.indexOf('/') === -1)
     .map(key => raw[key])

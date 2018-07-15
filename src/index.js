@@ -1,18 +1,49 @@
 import squarify from 'squarify'
 import { files } from './data'
-import { fileArrayToStructure, squarifyOne, squarifySeveral } from './utils'
-
+import {
+  fileArrayToStructure,
+  squarifyOne,
+  squarifySeveral,
+  noChildArr
+} from './utils'
+const layer = []
 const data = fileArrayToStructure(files)
 const container = { x0: 0, y0: 0, x1: 100, y1: 100 }
 
+function cacheLayer() {
+  const idx = layer.length
+  const nextLayer = (layer[idx - 1] || [{ children: data }]).reduce(
+    (result, item) => result.concat(item.children || []),
+    []
+  )
+  if (nextLayer.length) {
+    layer[idx] = nextLayer
+    return true
+  }
+  return false
+}
+function deCacheLayer() {
+  if (!layer.length) return false
+  layer[layer.length - 1].forEach(item => delete item.children)
+  layer.length -= 1
+  render()
+  return true
+}
+
+let cache = data.reduce(
+  (result, item) => result.concat(item.children || []),
+  []
+)
+
 function calc() {
   // console.warn(data.map(a => a.value)) // 触发所有Proxy的getter
-  const output = squarifySeveral(data, container, 4)
+  const output = squarifyOne(data, container, 4)
   console.log('test', output)
   window.output = output
 }
-function render() {
+function render(output = squarify(data, container)) {
   const wrapper = document.querySelector('#root')
+  ;[].reduceRight.call(wrapper.childNodes, (_, el) => el && el.remove(), '')
   output.forEach((block, i) => {
     let el = document.querySelector(`.b-${i}`)
     if (!el) {
@@ -26,24 +57,27 @@ function render() {
     el.style.height = `${block.y1 - block.y0}vh`
   })
 }
-function init() {
-  calc()
+async function init() {
+  while (cacheLayer()) {
+    console.warn('cacheLayer')
+  }
   render()
-  const $tip = document.querySelector('#tip')
-  window.addEventListener('mousemove', e => {
-    $tip.style.left = `${e.x}px`
-    $tip.style.top = `${e.y}px`
-    const block = (
-      [].find.call(e.target.classList, a => a.indexOf('-') > -1) || ''
-    ).replace('b-', '')
-    const meta = output[+block]
-    if (meta) {
-      $tip.textContent = `${meta.name}
-${meta.full}
-`
-    }
-  })
+  ;(function animate() {
+    requestAnimationFrame(() => setTimeout(() => animate(), 200))
+    deCacheLayer()
+  })()
 }
+Object.assign(window, {
+  data,
+  container,
+  render,
+  noChildArr,
+  squarify,
+  squarifyOne,
+  layer,
+  cacheLayer,
+  deCacheLayer
+})
 setTimeout(() => {
   init()
 }, 100)
