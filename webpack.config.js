@@ -1,6 +1,16 @@
 const path = require('path')
+const os = require('os')
 const htmlWebpackPlugin = require('html-webpack-plugin')
 const CleanWebpackPlugin = require('clean-webpack-plugin')
+
+const targetInterface = Object.values(os.networkInterfaces())
+  .map(arr => arr.find(interface => interface.family === 'IPv4'))
+  .find(interface => !interface.internal)
+
+const host = targetInterface.address || '0.0.0.0'
+const port = 8008
+
+console.info(`listening at: ${host}:${port}`)
 
 module.exports = {
   mode: 'development',
@@ -29,7 +39,7 @@ module.exports = {
   ],
   devServer: {
     contentBase: path.join(__dirname, 'bundle'),
-    host: 'localhost',
-    port: 8008
+    host,
+    port
   }
 }
