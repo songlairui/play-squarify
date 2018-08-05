@@ -38,11 +38,12 @@ function deCacheLayer() {
 }
 /**
  * 改造之前
+  */
 // 隐藏layer
 function hideLayer(idx = 1) {
   if (!layer[idx]) return
   layer[idx].forEach(item => {
-    if (!item.children) {
+    if (item.children) {
       item.children = item.children.map(son => {
         return new Proxy(son, {
           get(target, prop) {
@@ -55,35 +56,36 @@ function hideLayer(idx = 1) {
     }
   })
 }
- */
+
 // 隐藏layer, 当前层无法操作，只能操作下一层？！
 // 除非对象中存储一个上一层的变量，等了解数据结构之后再尝试
-function hideLayer(idx = 1) {
-  if (!layer[idx]) return
-  layer[idx].forEach(item => {
-    if (item.children) {
-      item.children.splice(
-        1,
-        Infinity,
-        item.children.map(son => {
-          console.warn(son.__target__ ? '-- Proxy' : '-- -raw')
-          const rawSon = son.__target__ || son
-          return new Proxy(son, {
-            get(target, prop, receiver) {
-              if (prop === 'children') return undefined
-              if (prop === '__target__') return target
-              if (prop !== 'value') return Reflect.get(target, prop, receiver)
-              if (target.value !== undefined) return target.value
-              const value = target.children.reduce((a, b) => a + b.value, 0) // 求和
-              target.value = value
-              return value
-            }
-          })
-        })
-      )
-    }
-  })
-}
+// function hideLayer(idx = 1) {
+//   if (!layer[idx]) return
+//   layer[idx].forEach(item => {
+//     if (item.children) {
+//       item.children.splice(
+//         1,
+//         Infinity,
+//         item.children.map(son => {
+//           console.warn(son.__target__ ? '-- Proxy' : '-- -raw')
+//           const rawSon = son.__target__ || son
+//           return new Proxy(son, {
+//             get(target, prop, receiver) {
+//               if (prop === 'children') return undefined
+//               if (prop === '__target__') return target
+//               if (prop !== 'value') return Reflect.get(target, prop, receiver)
+//               if (target.value !== undefined) return target.value
+//               const value = target.children.reduce((a, b) => a + b.value, 0) // 求和
+//               target.value = value
+//               return value
+//             }
+//           })
+//         })
+//       )
+//     }
+//   })
+// }
+
 function showLayer(idx) {
   if (!layer[idx]) return
   layer[idx].forEach(item => {})
@@ -121,7 +123,6 @@ async function init() {
   while (cacheLayer()) {
     console.warn('cacheLayer')
   }
-  // hideLayer(2)
   render()
   ;(function animate() {
     return
