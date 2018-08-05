@@ -50,35 +50,47 @@ function render() {
   RESPONSING = HOVER
   if (!RESPONSING) return
   if (last) {
-    siblingsBg(last, el => (el.style.background = ''))
+    ;[].forEach.call(
+      document.querySelector('#root').querySelectorAll('div'),
+      el => (el.style.background = '')
+    )
+    // siblingsBg(last, el => (el.style.background = ''))
   }
-  siblingsBg(RESPONSING)
+  // siblingsBg(RESPONSING, el => (el.style.background = 'rgba(255,100,100,.8)'))
+  let next = RESPONSING
+  let alpha = 0.8
+  while (next._parent) {
+    siblingsBg(next, { a: alpha })
+    next = next._parent
+    alpha /= 1.5
+  }
 }
 
-function siblingsBg(
-  item,
-  fn = el => (el.style.background = 'rgba(255,100,100,.5)')
-) {
+function siblingsBg(item, options = {}) {
   if (!item._parent) return
+  const h = options.h || 0
   item._parent.children.forEach(siblings => {
     if (siblings.name === item.name) return
-    toggleBg(siblings, fn)
+    toggleBg(
+      siblings,
+      Object.assign({}, options, { h: h + Math.random() * (255 - h) })
+    )
   })
 }
 
-function toggleBg(
-  item,
-  fn = el => (el.style.background = 'rgba(255,100,100,.5)')
-) {
+function toggleBg(item, options = {}) {
+  const { h = 0, s = 100, l = 50, a = 0.8 } = options
   if (item.children) {
     item.children.forEach(subItem => {
-      toggleBg(subItem, fn)
+      toggleBg(subItem, options)
     })
   } else {
     const className = path2ClassName(
       [getPath(item._parent), item.name].join('/')
     )
-    fn.call(null, document.querySelector(`.b-${className}`))
+    document.querySelector(
+      `.b-${className}`
+    ).style.background = `hsla(${h}, ${s}%, ${l}%, ${a})`
   }
 }
 
