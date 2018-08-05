@@ -59,22 +59,26 @@ function render() {
   // siblingsBg(RESPONSING, el => (el.style.background = 'rgba(255,100,100,.8)'))
   let next = RESPONSING
   let alpha = 0.8
+  let change = false
   while (next._parent) {
-    siblingsBg(next, { a: alpha })
+    siblingsBg(next, { a: alpha, change })
     next = next._parent
+    change = true
     alpha /= 1.5
   }
 }
 
 function siblingsBg(item, options = {}) {
   if (!item._parent) return
-  const h = options.h || 0
+  let h = options.h || 0
+  const change = options.change
   item._parent.children.forEach(siblings => {
     if (siblings.name === item.name) return
-    toggleBg(
-      siblings,
-      Object.assign({}, options, { h: h + Math.random() * (255 - h) })
-    )
+    if (change) {
+      h += 5
+      if (h > 255) h -= 255
+    }
+    toggleBg(siblings, Object.assign({}, options, { h }))
   })
 }
 
