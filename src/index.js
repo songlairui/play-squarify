@@ -59,11 +59,11 @@ function render() {
   // siblingsBg(RESPONSING, el => (el.style.background = 'rgba(255,100,100,.8)'))
   let next = RESPONSING
   let alpha = 0.8
-  let change = false
+  let change = 0
   while (next._parent) {
     siblingsBg(next, { a: alpha, change })
     next = next._parent
-    change = true
+    change += 15
     alpha /= 1.5
   }
 }
@@ -71,7 +71,7 @@ function render() {
 function siblingsBg(item, options = {}) {
   if (!item._parent) return
   let h = options.h || 0
-  const change = options.change
+  const change = options.change || 0
   item._parent.children.forEach(siblings => {
     if (siblings.name === item.name) return
     if (change) {
