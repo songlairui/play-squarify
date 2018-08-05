@@ -7,10 +7,10 @@ const targetInterface = Object.values(os.networkInterfaces())
   .map(arr => arr.find(interface => interface.family === 'IPv4'))
   .find(interface => !interface.internal)
 
-const host = targetInterface.address || '0.0.0.0'
+const host = '0.0.0.0'
 const port = 8008
 
-console.info(`listening at: ${host}:${port}`)
+console.info(`listening at: ${targetInterface}:${port}`)
 
 module.exports = {
   mode: 'development',
@@ -40,6 +40,7 @@ module.exports = {
   devServer: {
     contentBase: path.join(__dirname, 'bundle'),
     host,
-    port
+    port,
+    disableHostCheck: true
   }
 }
