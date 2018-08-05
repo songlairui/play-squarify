@@ -1,4 +1,5 @@
 import squarify from 'squarify'
+import _ from 'lodash'
 
 export function squarifyOne(arr, ...x) {
   return squarify.call(null, noChildArr(arr), ...x)
@@ -6,9 +7,25 @@ export function squarifyOne(arr, ...x) {
 
 export function squarifySeveral(arr, container, level = 0) {
   const data = limitArrChild(arr, level)
-  console.warn('src', data)
   return squarify(data, container)
 }
+
+function setParent(item) {
+  if (Array.isArray(item.children)) {
+    item.children.forEach(subItem => {
+      subItem._parent = item
+      setParent(subItem)
+    })
+  }
+  return item
+}
+export function fillData(arr) {
+  arr.forEach(item => {
+    setParent(item)
+  })
+  return arr
+}
+
 export function noChildArr(arr) {
   return arr.map(obj => {
     return new Proxy(obj.__target__ || obj, {
@@ -52,6 +69,18 @@ export function limitArrChild(obj, level = 0) {
   }
   return deepClone(obj)
 }
+
+export function getPath(item) {
+  if (!item._path) {
+    if (item._parent) {
+      item._path = [getPath(item._parent), item.name].join('/')
+    } else {
+      item._path = item.name || '-'
+    }
+  }
+  return item._path
+}
+
 export function fileArrayToStructure(arr) {
   const raw = {}
   let file = arr.pop()
@@ -77,6 +106,12 @@ export function fileArrayToStructure(arr) {
               const value = target.children.reduce((a, b) => a + b.value, 0) // 求和
               target.value = value
               return value
+            },
+            set(target, prop, value) {
+              if (['_parent', '_path'].includes(prop)) {
+                target[prop] = value
+              }
+              return true
             }
           }
         )
