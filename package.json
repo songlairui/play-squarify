@@ -6,18 +6,22 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx webpack --config webpack.config.js",
-    "start": "npx webpack-dev-server --config webpack.config.js --color --progress --hot"
+    "start": "npx webpack-dev-server --config webpack.config.js --color --progress --hot",
+    "dev": "parcel src/analyse/index.html"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "acorn": "^5.7.1",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.5",
+    "babylon-walk": "^1.0.2",
     "chai": "^4.1.2",
     "clean-webpack-plugin": "^0.1.19",
     "html-webpack-plugin": "^3.2.0",
     "mocha": "^5.2.0",
+    "parcel-bundler": "^1.9.7",
     "squarify": "^1.0.1",
     "webpack": "^4.15.1",
     "webpack-cli": "^3.0.8",

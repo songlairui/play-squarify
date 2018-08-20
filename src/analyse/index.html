@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        html,
+        body,
+        #root {
+            height: 100%;
+            margin: 0;
+            padding: 0
+        }
+
+        #root>div {
+            cursor: pointer;
+            position: absolute;
+            box-shadow: inset 0 0 3px -1px;
+        }
+
+        #root>div:hover {
+            background: rgba(0, 250, 50, .3)
+        }
+
+        #tip {
+            position: fixed;
+            min-width: 100px;
+            min-height: 100px;
+            background: rgba(0, 0, 0, .3);
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .lines {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .lines>div {
+            position: absolute;
+            height: 1px;
+            border-bottom: 1px solid red;
+            transform-origin: 0 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='root'></div>
+    <div id="tip">#tip</div>
+    <div id="log"></div>
+    <div class=lines></div>
+    <script src="main.js"></script>
+</body>
+
+</html>
