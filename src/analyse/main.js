@@ -28,9 +28,12 @@ function render(raw) {
 function renderRelate(raw, ctx) {
   raw.forEach((item, idx) => {
     if (!item.relate) return
-    const $src = document.querySelector(`.${name(item.name)}`)
+    const srcId = `.${name(item.name)}`
+    const $src = document.querySelector(srcId)
     item.relate.forEach(jsName => {
-      const $dest = document.querySelector(`.${name(jsName)}`)
+      const destId = `.${name(jsName)}`
+      const $dest = document.querySelector(destId)
+      count(name(item.name), name(jsName))
       connect(
         $src,
         $dest,
@@ -39,6 +42,15 @@ function renderRelate(raw, ctx) {
     })
   })
 }
+
+function count(srcId, destId) {
+  if (!dict[destId]) return console.warn('return')
+  if (!dict[destId].upper) {
+    dict[destId].upper = []
+  }
+  dict[destId].upper.push(srcId)
+}
+
 function connect(src, dest, ctx) {
   if (!src || !dest || !ctx) return
   const raw = [src, dest].map($el => {
@@ -50,7 +62,7 @@ function connect(src, dest, ctx) {
   })
 
   const grad = ctx.createLinearGradient(raw[0].x, raw[0].y, raw[1].x, raw[1].y)
-  grad.addColorStop(0, 'rgba(0,0,200,.0)')
+  grad.addColorStop(0, 'rgba(0,0,200,.1)')
   grad.addColorStop(1, 'rgba(200,0,0,.1)')
   ctx.strokeStyle = grad
 
@@ -103,18 +115,25 @@ function tip(e) {
   if (!dict[active]) return
   $tip.textContent = `${dict[active].name}
 ${dict[active].relate && dict[active].relate.join('\n')}
+----------\n
+${dict[active].upper && dict[active].upper.join('\n')}
     `
 }
-
-function listen() {}
 
 function main() {
   const dict = genDict(data)
   const container = { x0: 0, y0: 0, x1: 100, y1: 100 }
-  const raw = squarify(data, container)
   const $canvas = document.querySelector('canvas')
   const $root = document.querySelector('#root')
   const $tip = document.querySelector('#tip')
+
+  window.data = data
+  window.dict = dict
+  window.$tip = $tip
+  window.active = active
+  window.connect = connect
+
+  const raw = squarify(data, container)
   $canvas.width = $root.offsetWidth
   $canvas.height = $root.offsetHeight
   const ctx = $canvas.getContext('2d')
@@ -124,11 +143,6 @@ function main() {
   renderRelate(raw, ctx)
   let active
   $root.addEventListener('mousemove', tip)
-  window.data = data
-  window.dict = dict
-  window.$tip = $tip
-  window.active = active
-  window.connect = connect
 }
 
 main()
