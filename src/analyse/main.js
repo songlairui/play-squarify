@@ -25,6 +25,16 @@ function render(raw) {
   $root.appendChild(frag)
 }
 
+
+function countRelate(raw) {
+  raw.forEach((item, idx) => {
+    if (!item.relate) return
+    item.relate.forEach(jsName => {
+      count(name(item.name), name(jsName))
+    })
+  })
+}
+
 function renderRelate(raw, ctx) {
   raw.forEach((item, idx) => {
     if (!item.relate) return
@@ -33,7 +43,6 @@ function renderRelate(raw, ctx) {
     item.relate.forEach(jsName => {
       const destId = `.${name(jsName)}`
       const $dest = document.querySelector(destId)
-      count(name(item.name), name(jsName))
       connect(
         $src,
         $dest,
@@ -51,7 +60,8 @@ function count(srcId, destId) {
   dict[destId].upper.push(srcId)
 }
 
-function connect(src, dest, ctx) {
+function connect(src, dest, step = 1) {
+  const ctx = $ctx
   if (!src || !dest || !ctx) return
   const raw = [src, dest].map($el => {
     const { x, y, width, height } = $el.getBoundingClientRect()
@@ -60,10 +70,12 @@ function connect(src, dest, ctx) {
       y: y + height / 2
     }
   })
-
+  let opacity = .5 - step / 10
+  if (opacity > 1) opacity = 1
+  if (opacity < 0) opacity = 0
   const grad = ctx.createLinearGradient(raw[0].x, raw[0].y, raw[1].x, raw[1].y)
-  grad.addColorStop(0, 'rgba(0,0,200,.1)')
-  grad.addColorStop(1, 'rgba(200,0,0,.1)')
+  grad.addColorStop(0, `rgba(0,0,200,${opacity})`)
+  grad.addColorStop(1, `rgba(200,0,0,${opacity + .1})`)
   ctx.strokeStyle = grad
 
   ctx.beginPath()
@@ -71,32 +83,6 @@ function connect(src, dest, ctx) {
   ctx.lineTo(raw[1].x, raw[1].y)
   ctx.closePath()
   ctx.stroke()
-}
-function connect0(src, dest) {
-  if (!src || !dest) return
-  const raw = [src, dest].map($el => {
-    const { x, y, width, height } = $el.getBoundingClientRect()
-    return {
-      x: x + width / 2,
-      y: y + height / 2
-    }
-  })
-
-  const { length, angle } = calc(raw[0], raw[1])
-  const $line = document.createElement('div')
-  $line.style.width = `${length}px`
-  $line.style.transform = `rotate(${angle}deg)`
-  $line.style.left = `${raw[0].x}px`
-  $line.style.top = `${raw[0].y}px`
-  document.querySelector('.lines').appendChild($line)
-}
-
-function calc(pointA, pointB) {
-  const dX = pointA.x - pointB.x
-  const dY = pointA.y - pointB.y
-  const length = Math.sqrt(dX * dX + dY * dY)
-  const angle = (Math.asin(dY / dX) * 180) / Math.PI
-  return { length, angle }
 }
 
 function genDict(data) {
@@ -108,7 +94,7 @@ function genDict(data) {
 }
 
 function tip(e) {
-  const current = e.target.className
+  const current = e.target.classList[0]
   if (!current) return
   if (active === current) return
   active = current
@@ -120,29 +106,69 @@ ${dict[active].upper && dict[active].upper.join('\n')}
     `
 }
 
+const cache = {}
+
+function dotClick(e, step = 0) {
+  const current = e instanceof Event ? e.target.classList[0] : e
+  if (!current) return
+  if(!dict[current].relate) return
+  if (cache[current]) {
+    return
+  } else {
+    cache[current] = true
+  }
+  if (step > 4) return
+  dict[current].relate.forEach(next => {
+    connect(document.querySelector(`.${current}`), document.querySelector(`.${name(next)}`), step)
+    dotClick(name(next), step + 1)
+  })
+}
+
+function dotClickReverse(e, step = 0) {
+  const current = e instanceof Event ? e.target.classList[0] : e
+  if (!current) return
+  if(!dict[current].upper) return
+  if (step > 4) return
+  dict[current].upper.forEach(upper => {
+    const upperName = upper
+    if (cache[upperName]) {
+      return
+    } else {
+      cache[upperName] = true
+    }
+    connect(document.querySelector(`.${upperName}`), document.querySelector(`.${current}`), step)
+    dotClickReverse(upperName, step + 1)
+  })
+}
+
+
 function main() {
   const dict = genDict(data)
   const container = { x0: 0, y0: 0, x1: 100, y1: 100 }
   const $canvas = document.querySelector('canvas')
   const $root = document.querySelector('#root')
   const $tip = document.querySelector('#tip')
+  $canvas.width = $root.offsetWidth
+  $canvas.height = $root.offsetHeight
+  const ctx = $canvas.getContext('2d')
 
   window.data = data
   window.dict = dict
   window.$tip = $tip
   window.active = active
   window.connect = connect
+  window.$ctx = ctx
 
   const raw = squarify(data, container)
-  $canvas.width = $root.offsetWidth
-  $canvas.height = $root.offsetHeight
-  const ctx = $canvas.getContext('2d')
   ctx.fillStyle = 'rgba(255,165,0,1)'
 
   render(raw)
-  renderRelate(raw, ctx)
+  countRelate(raw)
+  // renderRelate(raw, ctx)
   let active
   $root.addEventListener('mousemove', tip)
+
+  $root.addEventListener('click', dotClickReverse)
 }
 
 main()
