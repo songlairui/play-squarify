@@ -11,6 +11,10 @@ const debug = false
 const logger = (...x) => debug && console.warn(...x)
 const walk = require('babylon-walk')
 
+function name(str) {
+    return str.replace(/^\.\//, '').split('.')[0]
+}
+
 function grabRequires(file) {
     const targetFile = path.resolve(targetDir, file)
     if (!/\.js$/.test(targetFile) || !fs.statSync(targetFile).isFile())
@@ -28,7 +32,9 @@ function grabRequires(file) {
                 if (!tmpPath) return
                 if (tmpPath.indexOf('.')) return
                 if (tmpPath.split('/').length > 2) return
-                pool.push(tmpPath)
+                const candiate = name(tmpPath)
+                if (pool.indexOf(candiate) > -1) return
+                pool.push(candiate)
             }
         }
     })
