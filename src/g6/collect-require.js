@@ -21,24 +21,57 @@ function grabRequires(file) {
         return undefined
     const code = fs.readFileSync(targetFile).toString()
     const ast = babylon.parse(code, conf)
+
     const pool = []
+    const constants = {}
+    const allcallee = {}
+
     walk.simple(ast, {
-        CallExpression(callNode) {
-            if (
-                callNode.callee.type === 'Identifier' &&
-                callNode.callee.name === 'require'
-            ) {
-                const tmpPath = callNode.arguments[0].value
-                if (!tmpPath) return
-                if (tmpPath.indexOf('.')) return
-                if (tmpPath.split('/').length > 2) return
-                const candiate = name(tmpPath)
-                if (pool.indexOf(candiate) > -1) return
-                pool.push(candiate)
+        FunctionExpression(funcNode) {
+            funcNode.params.map(iNode => {
+                if (iNode.type !== 'Identifier')
+                    return console.warn('// todo', iNode.type)
+                constants[iNode.name] = false
+            })
+        },
+        VariableDeclarator(declarNode) {
+            let calleeName = declarNode.id.name
+            if (!calleeName) {
+                if (!declarNode.id.properties) return
+                calleeName = declarNode.id.properties
+                    .map(node => node.value.name)
+                    .join()
+            }
+            if (!declarNode.init) return
+            if (declarNode.init.type === 'CallExpression') {
+                const callNode = declarNode.init
+                if (
+                    callNode.callee.type === 'Identifier' &&
+                    callNode.callee.name === 'require'
+                ) {
+                    const tmpPath = callNode.arguments[0].value
+                    if (!tmpPath) return
+                    if (tmpPath.indexOf('.')) return
+                    if (tmpPath.split('/').length > 2) return
+                    const candiate = name(tmpPath)
+                    if (pool.find(item => item.relate === candiate)) return
+                    pool.push({
+                        relate: candiate,
+                        callee: calleeName
+                    })
+                }
+            } else {
+                constants[calleeName] = false
+            }
+        },
+        Identifier(idNode) {
+            if (!allcallee[idNode.name]) {
+                allcallee[idNode.name] = true
             }
         }
     })
-    return pool
+    const dict = { ...allcallee, ...constants }
+    return pool.filter(item => dict[item.callee]).map(item => item.relate)
 }
 
 function main() {

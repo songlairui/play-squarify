@@ -1,28 +1,22 @@
 const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
-
-const targetDir = '/opt/wechat_web_devtools/package.nw/js'
 const conf = {
     sourceType: 'module',
     plugins: ['jsx', 'flow', 'dynamicImport', 'objectRestSpread']
 }
 const walk = require('babylon-walk')
 
-const debug = false
-const logger = (...x) => debug && console.warn(...x)
-
 function name(str) {
     return str.replace(/^\.\//, '').split('.')[0]
 }
 
-function grabRequires(file) {
-    const targetFile = path.resolve(targetDir, file)
-    if (!/\.js$/.test(targetFile) || !fs.statSync(targetFile).isFile())
-        return undefined
+function test() {
+    const targetFile =
+        '/opt/wechat_web_devtools/package.nw/js/444cd5bc8c3d312afefcdada704d0f95.js'
+
     const code = fs.readFileSync(targetFile).toString()
     const ast = babylon.parse(code, conf)
-
     const pool = []
     const constants = {}
     const allcallee = {}
@@ -75,16 +69,4 @@ function grabRequires(file) {
     return pool.filter(item => dict[item.callee]).map(item => item.relate)
 }
 
-function main() {
-    const dirs = fs.readdirSync(targetDir)
-    const result = dirs.map(dir => ({
-        name: dir,
-        relate: grabRequires(dir),
-        value: 1
-    }))
-    console.warn(result)
-    fs.writeFileSync('./data.json', JSON.stringify(result, null, 2))
-    return result
-}
-
-main()
+console.log(test())
