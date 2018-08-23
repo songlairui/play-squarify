@@ -35,7 +35,7 @@ function countRelate(raw) {
   })
 }
 
-function renderRelate(raw, ctx) {
+function renderRelate(raw) {
   raw.forEach((item, idx) => {
     if (!item.relate) return
     const srcId = `.${name(item.name)}`
@@ -45,8 +45,7 @@ function renderRelate(raw, ctx) {
       const $dest = document.querySelector(destId)
       connect(
         $src,
-        $dest,
-        ctx
+        $dest
       )
     })
   })
@@ -71,11 +70,12 @@ function connect(src, dest, step = 1) {
     }
   })
   let opacity = .5 - step / 10
-  if (opacity > 1) opacity = 1
+  if (opacity > .9) opacity = .9
   if (opacity < 0) opacity = 0
   const grad = ctx.createLinearGradient(raw[0].x, raw[0].y, raw[1].x, raw[1].y)
+  if(!step) opacity = .1
   grad.addColorStop(0, `rgba(0,0,200,${opacity})`)
-  grad.addColorStop(1, `rgba(200,0,0,${opacity + .1})`)
+  grad.addColorStop(1, `rgba(200,0,0,${opacity + .01})`)
   ctx.strokeStyle = grad
 
   ctx.beginPath()
@@ -99,7 +99,8 @@ function tip(e) {
   if (active === current) return
   active = current
   if (!dict[active]) return
-  $tip.textContent = `${dict[active].name}
+  $tip.querySelector('input').value = dict[active].name.replace('.js', '')
+  $tip.querySelector('pre').textContent = `
 ${dict[active].relate && dict[active].relate.join('\n')}
 ----------\n
 ${dict[active].upper && dict[active].upper.join('\n')}
@@ -164,11 +165,16 @@ function main() {
 
   render(raw)
   countRelate(raw)
-  // renderRelate(raw, ctx)
+  renderRelate(raw, ctx)
   let active
   $root.addEventListener('mousemove', tip)
 
-  $root.addEventListener('click', dotClickReverse)
+  // $root.addEventListener('click', dotClickReverse)
+  $root.addEventListener('click', () => {
+    $tip.querySelector('input').select()
+    document.execCommand('copy');
+    console.warn('clicker')
+  })
 }
 
 main()
