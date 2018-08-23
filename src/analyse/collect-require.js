@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
+const { entry: ignoreEntry, bits: ignoreRelate } = require('../g6/ignoreList')
 
 const targetDir = '/opt/wechat_web_devtools/package.nw/js'
 const conf = {
@@ -20,6 +21,7 @@ function grabRequires(file) {
     const targetFile = path.resolve(targetDir, file)
     if (!/\.js$/.test(targetFile) || !fs.statSync(targetFile).isFile())
         return undefined
+    if (ignoreEntry.includes(name(file))) { return []}
     const code = fs.readFileSync(targetFile).toString()
     const ast = babylon.parse(code, conf)
 
@@ -48,7 +50,7 @@ function grabRequires(file) {
                 const callNode = declarNode.init
                 if (
                     callNode.callee.type === 'Identifier' &&
-                    callNode.callee.name === 'require'
+                    ['require', 'directRequire'].includes(callNode.callee.name)
                 ) {
                     const tmpPath = callNode.arguments[0].value
                     if (!tmpPath) return
@@ -56,6 +58,7 @@ function grabRequires(file) {
                     if (tmpPath.split('/').length > 2) return
                     const candiate = name(tmpPath)
                     if (pool.find(item => item.relate === candiate)) return
+                    if (ignoreRelate.includes(candiate)) return
                     pool.push({
                         relate: candiate,
                         callee: calleeName
@@ -83,7 +86,7 @@ function main() {
         value: 1
     }))
     console.warn(result)
-    fs.writeFileSync('./data.json', JSON.stringify(result, null, 2))
+    fs.writeFileSync(path.resolve(__dirname, './data.json'), JSON.stringify(result, null, 2))
     return result
 }
 
