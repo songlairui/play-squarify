@@ -1,7 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
-const unused = require('unused')
+const Linter = require('eslint').Linter
+const linter = new Linter()
 const { entry: ignoreEntry, bits: ignoreRelate } = require('../g6/ignoreList')
 const conf = {
     sourceType: 'module',
@@ -17,24 +18,30 @@ function test() {
     const targetFile =
         '/opt/wechat_web_devtools/package.nw/js/25d0beb4120ce2acafb4e03b95444fda.js'
 
-    const code = fs.readFileSync(targetFile)
-    const unusedArr = unused(code)
-    const ast = babylon.parse(code.toString(), conf)
+    const code = fs.readFileSync(targetFile).toString()
+    const ast = babylon.parse(code, conf)
+    console.warn(code.slice(19))
+    console.warn(code.slice(18))
+    var unusedVars = linter
+        .verify(
+            code,
+            {
+                parser: 'babel-eslint',
+                rules: {
+                    'no-unused-vars': 'error'
+                }
+            },
+            { filename: 'foo.js' }
+        )
+        .map(msg => {
+            return {
+                message: msg.message,
+                line: msg.line,
+                column: msg.column
+            }
+        })
     const pool = []
-    // console.warn((ast.program.body))
-    // return
-    let mainAst = ast.program.body
-    mainAst.forEach(node => {
-        if (
-            node.type === 'ExpressionStatement' &&
-            node.expression.type === 'UnaryExpression' &&
-            node.expression.argument.callee.type === 'FunctionExpression'
-        ) {
-            mainAst = node
-            return
-        }
-    })
-    walk.simple(mainAst, {
+    walk.simple(ast, {
         VariableDeclarator(declarNode) {
             let calleeName = declarNode.id.name
             if (!calleeName) {
@@ -66,14 +73,15 @@ function test() {
             }
         }
     })
-    // console.warn(unusedArr, pool.map(item => [item.callee, item.loc]))
+    console.warn(unusedVars, pool.map(item => [item.callee, item.loc]))
     return pool
-        .filter(item =>
-            !unusedArr.find(
-                unused =>
-                    unused.loc.line === item.loc.line &&
-                    unused.loc.column === item.loc.column
-            )
+        .filter(
+            item =>
+                !unusedVars.find(
+                    unused =>
+                        unused.line === item.loc.line &&
+                        unused.column - 1 === item.loc.column
+                )
         )
         .map(item => item.relate + '-' + item.callee)
 }
