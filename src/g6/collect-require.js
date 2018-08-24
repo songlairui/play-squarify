@@ -1,6 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
+const Linter = require('eslint').Linter
+const linter = new Linter()
 
 const { entry: ignoreEntry, bits: ignoreRelate } = require('./ignoreList')
 const targetDir = '/opt/wechat_web_devtools/package.nw/js'
@@ -20,21 +22,34 @@ function grabRequires(file) {
     const targetFile = path.resolve(targetDir, file)
     if (!/\.js$/.test(targetFile) || !fs.statSync(targetFile).isFile())
         return undefined
-    if (ignoreEntry.includes(name(file))) { return []}
+    if (ignoreEntry.includes(name(file))) {
+        return []
+    }
     const code = fs.readFileSync(targetFile).toString()
+
+    var unusedVars = linter
+        .verify(
+            code,
+            {
+                parser: 'babel-eslint',
+                rules: {
+                    'no-unused-vars': 'error'
+                }
+            },
+            { filename: 'foo.js' }
+        )
+        .map(msg => {
+            return {
+                message: msg.message,
+                line: msg.line,
+                column: msg.column
+            }
+        })
+
     const ast = babylon.parse(code, conf)
     const pool = []
-    const constants = {}
-    const allcallee = {}
 
     walk.simple(ast, {
-        FunctionExpression(funcNode) {
-            funcNode.params.map(iNode => {
-                if (iNode.type !== 'Identifier')
-                    return console.warn('// todo', iNode.type)
-                constants[iNode.name] = false
-            })
-        },
         VariableDeclarator(declarNode) {
             let calleeName = declarNode.id.name
             if (!calleeName) {
@@ -55,27 +70,27 @@ function grabRequires(file) {
                     if (tmpPath.indexOf('.')) return
                     if (tmpPath.split('/').length > 2) return
                     const candiate = name(tmpPath)
-                    if (pool.find(item => item.relate === candiate)) return
                     if (ignoreRelate.includes(candiate)) return
+                    if (pool.find(item => item.relate === candiate)) return
                     pool.push({
                         relate: candiate,
-                        callee: calleeName
+                        callee: calleeName,
+                        loc: { ...declarNode.loc.start }
                     })
-                } else {
-                    constants[calleeName] = false
                 }
-            } else {
-                constants[calleeName] = false
-            }
-        },
-        Identifier(idNode) {
-            if (!allcallee[idNode.name]) {
-                allcallee[idNode.name] = true
             }
         }
     })
-    const dict = { ...allcallee, ...constants }
-    return pool.filter(item => dict[item.callee]).map(item => item.relate)
+    return pool
+        .filter(
+            item =>
+                !unusedVars.find(
+                    unused =>
+                        unused.line === item.loc.line &&
+                        unused.column - 1 === item.loc.column
+                )
+        )
+        .map(item => item.relate)
 }
 
 function main() {
@@ -123,9 +138,12 @@ function main() {
             relate
         }
     })
-    relatingNode = Object.values(nodes).filter(node => node.relate.length || Object.keys(node.upper).length)
+    relatingNode = Object.values(nodes).filter(
+        node => node.relate.length || Object.keys(node.upper).length
+    )
     const demoData = { nodes: relatingNode, links: edges }
-    const destFile = '/media/idoz/code/github/3d-force-graph/example/datasets/data.json'
+    const destFile =
+        '/media/idoz/code/github/3d-force-graph/example/datasets/data.json'
     fs.writeFileSync(destFile, JSON.stringify(demoData, null, 2))
     return { result, demoData }
 }
