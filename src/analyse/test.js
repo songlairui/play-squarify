@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
+const unused = require('unused')
 const { entry: ignoreEntry, bits: ignoreRelate } = require('../g6/ignoreList')
 const conf = {
     sourceType: 'module',
@@ -14,11 +15,12 @@ function name(str) {
 
 function test() {
     const targetFile =
-        '/opt/wechat_web_devtools/package.nw/js/41168dca39589e852da6631126d0f94d.js'
+        '/opt/wechat_web_devtools/package.nw/js/25d0beb4120ce2acafb4e03b95444fda.js'
 
-    const code = fs.readFileSync(targetFile).toString()
-    const ast = babylon.parse(code, conf)
-    let total = []
+    const code = fs.readFileSync(targetFile)
+    const unusedArr = unused(code)
+    const ast = babylon.parse(code.toString(), conf)
+    const pool = []
     // console.warn((ast.program.body))
     // return
     let mainAst = ast.program.body
@@ -32,70 +34,48 @@ function test() {
             return
         }
     })
-
     walk.simple(mainAst, {
-        BlockStatement(blockNode) {
-            const constants = {}
-            const allcallee = {}
-            const pool = []
-            walk.simple(blockNode, {
-                FunctionExpression(funcNode) {
-                    funcNode.params.map(iNode => {
-                        if (iNode.type !== 'Identifier')
-                            return console.warn('// todo', iNode.type)
-                        constants[iNode.name] = false
+        VariableDeclarator(declarNode) {
+            let calleeName = declarNode.id.name
+            if (!calleeName) {
+                if (!declarNode.id.properties) return
+                calleeName = declarNode.id.properties
+                    .map(node => node.value.name)
+                    .join()
+            }
+            if (!declarNode.init) return
+            if (declarNode.init.type === 'CallExpression') {
+                const callNode = declarNode.init
+                if (
+                    callNode.callee.type === 'Identifier' &&
+                    ['require', 'directRequire'].includes(callNode.callee.name)
+                ) {
+                    const tmpPath = callNode.arguments[0].value
+                    if (!tmpPath) return
+                    if (tmpPath.indexOf('.')) return
+                    if (tmpPath.split('/').length > 2) return
+                    const candiate = name(tmpPath)
+                    if (ignoreRelate.includes(candiate)) return
+                    if (pool.find(item => item.relate === candiate)) return
+                    pool.push({
+                        relate: candiate,
+                        callee: calleeName,
+                        loc: { ...declarNode.loc.start }
                     })
-                },
-                VariableDeclarator(declarNode) {
-                    let calleeName = declarNode.id.name
-                    if (!calleeName) {
-                        if (!declarNode.id.properties) return
-                        calleeName = declarNode.id.properties
-                            .map(node => node.value.name)
-                            .join()
-                    }
-                    if (!declarNode.init) return
-                    if (declarNode.init.type === 'CallExpression') {
-                        const callNode = declarNode.init
-                        if (
-                            callNode.callee.type === 'Identifier' &&
-                            ['require', 'directRequire'].includes(
-                                callNode.callee.name
-                            )
-                        ) {
-                            const tmpPath = callNode.arguments[0].value
-                            if (!tmpPath) return
-                            if (tmpPath.indexOf('.')) return
-                            if (tmpPath.split('/').length > 2) return
-                            const candiate = name(tmpPath)
-                            if (pool.find(item => item.relate === candiate))
-                                return
-                            if (ignoreRelate.includes(candiate)) return
-                            pool.push({
-                                relate: candiate,
-                                callee: calleeName
-                            })
-                        } else {
-                            constants[calleeName] = false
-                        }
-                    } else {
-                        constants[calleeName] = false
-                    }
-                },
-                Identifier(idNode) {
-                    if (!allcallee[idNode.name]) {
-                        allcallee[idNode.name] = true
-                    }
                 }
-            })
-            const dict = { ...allcallee, ...constants }
-            const bPool = pool.filter(item => dict[item.callee])
-            total = total.concat(bPool)
-            console.warn('dict in block', Object.keys(allcallee), Object.keys(constants), pool)
+            }
         }
     })
-    // console.warn(Object.keys(allcallee), Object.keys(constants))
-    return total
+    // console.warn(unusedArr, pool.map(item => [item.callee, item.loc]))
+    return pool
+        .filter(item =>
+            !unusedArr.find(
+                unused =>
+                    unused.loc.line === item.loc.line &&
+                    unused.loc.column === item.loc.column
+            )
+        )
+        .map(item => item.relate + '-' + item.callee)
 }
 
-console.log(test())
+console.log(JSON.stringify(test(), null, 1))
